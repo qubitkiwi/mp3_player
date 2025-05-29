@@ -1,31 +1,45 @@
 #include <stdio.h>
-#include <ili9341.h>
+#include "ili9341.h"
+#include "lvgl.h"
+
+static void IRAM_ATTR lv_tick_task(void)
+{
+	lv_tick_inc(portTICK_RATE_MS);
+}
+
+void gui_task(void *pvParameter)
+{
+    lcd_init();
+
+    static lv_disp_buf_t disp_buf;
+    // lv_color_t buf1[DISP_BUF_SIZE];
+    lv_color_t *buf1 = (lv_color_t *) heap_caps_malloc(display_buffer_size * sizeof(lv_color_t), MALLOC_CAP_DMA);
+    lv_disp_buf_init(&disp_buf, buf1, NULL, DISP_BUF_SIZE);
+
+    lv_disp_drv_t disp_drv;
+    lv_disp_drv_init(&disp_drv);
+    disp_drv.flush_cb = ili9341_flush;
+	disp_drv.buffer = &disp_buf;
+    disp_drv.hor_res = 240;
+    disp_drv.ver_res = 320;
+    disp_drv.rotated = LV_DISP_ROT_270;
+	lv_disp_drv_register(&disp_drv);
+
+
+    esp_register_freertos_tick_hook(lv_tick_task);
+	demo_create();
+
+	while(1) {
+		vTaskDelay(1);
+		lv_task_handler();
+	}
+
+    free(buf1);
+    vTaskDelete(NULL);
+}
 
 void app_main(void)
 {
-    lcd_spi_init();
-    lcd_init();
-    int lcd_id = lcd_get_id();
-    printf("lcd id %x\n", lcd_id);
 
-    short data[100];
-    for (int i=0; i<100; ++i) {
-        data[i] = 0x70;
-    }
-    
-
-    while (1) {
-        lcd_get_pixel_format();
-
-        printf("1\n");
-        lcd_set_col_addr(0, 10);
-        printf("2\n");
-        lcd_set_page_addr(0, 10);
-        printf("3\n");
-        lcd_write(data, 100 * 2);
-        printf("4\n");
-
-        vTaskDelay( 1000 / portTICK_PERIOD_MS );
-    }
 
 }
