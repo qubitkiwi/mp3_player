@@ -14,22 +14,19 @@
 #define LCD_MISO    GPIO_NUM_5
 #define LCD_CS      GPIO_NUM_0
 
-//To speed up transfers, every SPI transfer sends a bunch of lines. This define specifies how many. More means more memory use,
-//but less overhead for setting up / finishing transfers. Make sure 240 is dividable by this.
-#define PARALLEL_LINES 16
 
-/*
- The LCD needs a bunch of command/argument values to be initialized. They are stored in this struct.
-*/
+#define TFT_HOR_RES   320
+#define TFT_VER_RES   240
+
+
 typedef struct {
     uint8_t cmd;
     uint8_t data[16];
-    uint8_t databytes; //No of data in data; bit 7 = delay after set; 0xFF = end of cmds.
+    uint8_t databytes;
 } lcd_init_cmd_t;
 
 
 DRAM_ATTR static const lcd_init_cmd_t ili_init_cmds[] = {
-
     /* Memory access contorl, MX=MY=0, MV=1, ML=0, BGR=1, MH=0 */
     {0x36, {0x28}, 1},
     /* Pixel format, 16bits/pixel for RGB/MCU interface */
@@ -48,6 +45,6 @@ void lcd_data(const uint8_t *data, int len);
 void lcd_spi_pre_transfer_callback(spi_transaction_t *t);
 uint32_t lcd_get_id();
 void lcd_init();
-void send_lines(int ypos, uint16_t *linedata);
-void send_line_finish();
-void ili9341_flush(lv_disp_drv_t * drv, const lv_area_t * area, lv_color_t * color_map);
+
+void ili9341_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map);
+void test_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map);
