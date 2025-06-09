@@ -42,6 +42,7 @@ DRAM_ATTR static const lcd_init_cmd_t ili_init_cmds[] = {
 
 void lcd_cmd(const uint8_t cmd, bool keep_cs_active);
 void lcd_data(const uint8_t *data, int len);
+void lcd_dma_data(const uint8_t *data, int data_len);
 void lcd_spi_pre_transfer_callback(spi_transaction_t *t);
 uint32_t lcd_get_id();
 void lcd_init();

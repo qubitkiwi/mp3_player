@@ -6,9 +6,10 @@
 
 ## 개발 현황
 - [x] lvgl 구동
-- [] SD 카드 읽기
-- [] MP3 디코딩
-- [] mp3 UI
+- [ ] resistive touch
+- [ ] SD 카드 읽기
+- [ ] MP3 디코딩
+- [ ] mp3 UI
 
 ## 사용 기술
 
