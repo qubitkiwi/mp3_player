@@ -165,14 +165,13 @@ void lcd_init()
     }
 }
 
-
 void ili9341_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map)
 {
     esp_err_t ret;
     int x;
-    static spi_transaction_t trans[6];
+    static spi_transaction_t trans[16];
 
-    for (x = 0; x < 6; x++) {
+    for (x = 0; x < 5; x++) {
         memset(&trans[x], 0, sizeof(spi_transaction_t));
         if ((x & 1) == 0) {
             //Even transfers are commands
@@ -184,7 +183,8 @@ void ili9341_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map)
             trans[x].user = (void*)1;
         }
         trans[x].flags = SPI_TRANS_USE_TXDATA;
-    }    
+    }
+
     trans[0].tx_data[0] = 0x2A;         //Column Address Set
     trans[1].tx_data[0] = area->x1 >> 8;            //Start Col High
     trans[1].tx_data[1] = area->x1 & 0xff;            //Start Col Low
@@ -196,59 +196,36 @@ void ili9341_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map)
     trans[3].tx_data[2] = area->y2 >> 8; //end page high
     trans[3].tx_data[3] = area->y2 & 0xff; //end page low
     trans[4].tx_data[0] = 0x2C;         //memory write
-    trans[5].tx_buffer = px_map;      //finally send the line data
-    trans[5].length = lv_area_get_width(area) * lv_area_get_height(area) * 2;  //Data length, in bits
-    trans[5].flags = 0; //undo SPI_TRANS_USE_TXDATA flag
+    
+    size_t buf_max, offset = 0;
+    spi_bus_get_max_transaction_len(LCD_HOST, &buf_max);
+    size_t data_len = lv_area_get_width(area) * lv_area_get_height(area) * 2;
+    lv_draw_sw_rgb565_swap(px_map, data_len);
 
-    printf("\nx1 %ld, x2 %ld, y1 %ld, y2 %ld, area size %ld ", area->x1, area->x2, area->y1, area->y2, lv_area_get_width(area) * lv_area_get_height(area) * 2);
+    while (offset < data_len) {
+        memset(&trans[x], 0, sizeof(trans[0]));
+        size_t send_size = (data_len - offset > buf_max) ? buf_max : (data_len - offset);
 
-    //Queue all transactions.
-    for (x = 0; x < 6; x++) {
-        ret = spi_device_queue_trans(lcd_spi, &trans[x], portMAX_DELAY);
+        trans[x].length = send_size * 8;
+        trans[x].tx_buffer = px_map + offset;
+        trans[x].user = (void*) 1;
+        
+        offset += send_size;
+        x++;
+    }
+
+    for (int i = 0; i < x; i++) {
+        ret = spi_device_queue_trans(lcd_spi, &trans[i], portMAX_DELAY);
         assert(ret == ESP_OK);
     }
 
-    for (x = 0; x < 6; x++) {
+    while (x--) {
         spi_transaction_t *r_trans;
         ret = spi_device_get_trans_result(lcd_spi, &r_trans, portMAX_DELAY);
         if (ret != ESP_OK) {
             ESP_LOGE("SPI", "Failed to get transaction result: %s", esp_err_to_name(ret));
         }
     }
-
-    lv_display_flush_ready(disp);
-}
-
-
-void test_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map)
-{
-    spi_device_acquire_bus(lcd_spi, portMAX_DELAY);
-    uint8_t data[4];
-    
-    // Column Address Set
-    data[0] = area->x1 >> 8;
-    data[1] = area->x1 & 0xff;
-    data[2] = area->x2 >> 8 ;
-    data[3] = area->x2 & 0xff;
-    lcd_cmd(0x2A, false);
-    lcd_data(data, 4);
-
-    // Page address set
-    data[0] = area->y1 >> 8;
-    data[1] = area->y1 & 0xff;
-    data[2] = area->y2 >> 8;
-    data[3] = area->y2 & 0xff;
-    lcd_cmd(0x2B, false);
-    lcd_data(data, 4);
-
-    // memory write
-    lv_draw_sw_rgb565_swap(px_map, lv_area_get_width(area) * lv_area_get_height(area) * 2);
-    lcd_cmd(0x2C, false);
-    
-    spi_device_release_bus(lcd_spi);
-
-    int data_len = lv_area_get_width(area) * lv_area_get_height(area) * 2;    
-    lcd_dma_data(px_map, data_len);
 
     lv_display_flush_ready(disp);
 }

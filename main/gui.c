@@ -5,6 +5,7 @@
 #include "./device/resistive_touchscreen.h"
 #include "gui.h"
 
+static lv_display_t * lcd_disp;
 static lv_indev_t *indev_touchpad;
 
 void touchpad_read(lv_indev_t * indev_drv, lv_indev_data_t * data)
@@ -109,20 +110,17 @@ void gui_task(void *pvParameter)
 {
     lcd_init();
     touch_init();
-
+    
     lv_init();
+        
+    lcd_disp = lv_display_create(TFT_HOR_RES, TFT_VER_RES);
+    lv_display_set_flush_cb(lcd_disp, ili9341_flush);
     
-    lv_display_t * disp;
-    disp = lv_display_create(TFT_HOR_RES, TFT_VER_RES);
-    lv_display_set_flush_cb(disp, test_flush);
-    // lv_display_set_flush_cb(disp, ili9341_flush);
-    
+    size_t buf_size = TFT_HOR_RES * TFT_VER_RES / 10 * lv_color_format_get_size(lv_display_get_color_format(lcd_disp));
+    uint8_t *buf1 = heap_caps_malloc(buf_size, MALLOC_CAP_DMA);
+    uint8_t *buf2 = NULL;
 
-    size_t buf_size = TFT_HOR_RES * TFT_VER_RES / 10 * lv_color_format_get_size(lv_display_get_color_format(disp));
-    lv_color_t *buf1 = heap_caps_malloc(buf_size, MALLOC_CAP_DMA);
-    lv_color_t *buf2 = NULL;
-
-    lv_display_set_buffers(disp, buf1, buf2, buf_size, LV_DISPLAY_RENDER_MODE_PARTIAL);
+    lv_display_set_buffers(lcd_disp, buf1, buf2, buf_size, LV_DISPLAY_RENDER_MODE_PARTIAL);
 
 
     // // touchpad
@@ -135,8 +133,8 @@ void gui_task(void *pvParameter)
     lv_example_anim_2();
 
 	while(1) {
-		vTaskDelay(20 / portTICK_PERIOD_MS);
 		lv_task_handler();
+		vTaskDelay(20 / portTICK_PERIOD_MS);
 	}
 
     free(buf1);

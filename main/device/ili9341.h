@@ -48,4 +48,3 @@ uint32_t lcd_get_id();
 void lcd_init();
 
 void ili9341_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map);
-void test_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map);
