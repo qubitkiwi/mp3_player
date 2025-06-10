@@ -13,20 +13,20 @@ void touchpad_read(lv_indev_t * indev_drv, lv_indev_data_t * data)
     static int32_t last_x = 0;
     static int32_t last_y = 0;
 
-    int x_tmp = read_touch_x();
 
-    if(x_tmp > 400) {
+    int x_tmp = read_touch_x();
+    int y_tmp = read_touch_y();
+
+    if(x_tmp > 410) {
         // x max = 3010, x min = 440
-        last_x = x_tmp;
-        last_x = ((last_x - 440) * TFT_HOR_RES) / (3010 - 440) ;
+        last_x = ((x_tmp - 440) * TFT_HOR_RES) / (3010 - 440) ;
         // y max = 2800, min = 510
-        last_y = read_touch_y();
-        last_y = ((last_y - 440) * TFT_VER_RES) / (2800 - 440);
+        last_y = ((y_tmp - 510) * TFT_VER_RES) / (2800 - 510);
         data->state = LV_INDEV_STATE_PRESSED;
     } else {
         data->state = LV_INDEV_STATE_RELEASED;
     }
-    printf("x %ld y %ld\n", last_x, last_y);
+    printf("raw x %d, raw y %d, x %ld y %ld\n", x_tmp, y_tmp, last_x, last_y);
 
     /*Set the last pressed coordinates*/
     data->point.x = last_x;
@@ -38,33 +38,33 @@ void IRAM_ATTR lv_tick_task(void)
 	lv_tick_inc(1);
 }
 
-// static void btn_event_cb(lv_event_t * e)
-// {
-//     lv_event_code_t code = lv_event_get_code(e);
-//     lv_obj_t * btn = lv_event_get_target(e);
-//     if(code == LV_EVENT_CLICKED) {
-//         static uint8_t cnt = 0;
-//         cnt++;
+static void btn_event_cb(lv_event_t * e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t * btn = lv_event_get_target(e);
+    if(code == LV_EVENT_CLICKED) {
+        static uint8_t cnt = 0;
+        cnt++;
 
-//         /*Get the first child of the button which is the label and change its text*/
-//         lv_obj_t * label = lv_obj_get_child(btn, 0);
-//         lv_label_set_text_fmt(label, "Button: %d", cnt);
-//     }
-// }
+        /*Get the first child of the button which is the label and change its text*/
+        lv_obj_t * label = lv_obj_get_child(btn, 0);
+        lv_label_set_text_fmt(label, "Button: %d", cnt);
+    }
+}
 
-// /**
-//  * Create a button with a label and react on click event.
-//  */
-// void lv_example_get_started_2(void)
-// {
-//     lv_obj_t * btn = lv_button_create(lv_screen_active());     /*Add a button the current screen*/
-//     lv_obj_set_align(btn, LV_ALIGN_CENTER);
-//     lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_ALL, NULL);           /*Assign a callback to the button*/
+/**
+ * Create a button with a label and react on click event.
+ */
+void lv_example_get_started_2(void)
+{
+    lv_obj_t * btn = lv_button_create(lv_screen_active());     /*Add a button the current screen*/
+    lv_obj_set_align(btn, LV_ALIGN_CENTER);
+    lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_ALL, NULL);           /*Assign a callback to the button*/
 
-//     lv_obj_t * label = lv_label_create(btn);          /*Add a label to the button*/
-//     lv_label_set_text(label, "Button");                     /*Set the labels text*/
-//     lv_obj_center(label);
-// }
+    lv_obj_t * label = lv_label_create(btn);          /*Add a label to the button*/
+    lv_label_set_text(label, "Button");                     /*Set the labels text*/
+    lv_obj_center(label);
+}
 
 static void anim_x_cb(void * var, int32_t v)
 {
@@ -119,18 +119,17 @@ void gui_task(void *pvParameter)
     size_t buf_size = TFT_HOR_RES * TFT_VER_RES / 10 * lv_color_format_get_size(lv_display_get_color_format(lcd_disp));
     uint8_t *buf1 = heap_caps_malloc(buf_size, MALLOC_CAP_DMA);
     uint8_t *buf2 = NULL;
-
     lv_display_set_buffers(lcd_disp, buf1, buf2, buf_size, LV_DISPLAY_RENDER_MODE_PARTIAL);
 
 
     // // touchpad
-    // indev_touchpad = lv_indev_create();
-    // lv_indev_set_type(indev_touchpad, LV_INDEV_TYPE_POINTER);
-    // lv_indev_set_read_cb(indev_touchpad, touchpad_read);
+    indev_touchpad = lv_indev_create();
+    lv_indev_set_type(indev_touchpad, LV_INDEV_TYPE_POINTER);
+    lv_indev_set_read_cb(indev_touchpad, touchpad_read);
 
     esp_register_freertos_tick_hook(lv_tick_task);
-	// lv_example_get_started_2();
-    lv_example_anim_2();
+	lv_example_get_started_2();
+    // lv_example_anim_2();
 
 	while(1) {
 		lv_task_handler();

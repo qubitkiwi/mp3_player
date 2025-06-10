@@ -42,15 +42,15 @@ int read_touch_x()
     gpio_config(&x_io_conf);
 
     // Y+ high, Y- low
-    gpio_set_level(TOUCH_Y_P_PIN, 1);
     gpio_set_level(TOUCH_Y_M_PIN, 0);
-
+    gpio_set_level(TOUCH_Y_P_PIN, 1);
 
     // X+ config
     ESP_ERROR_CHECK(adc_oneshot_config_channel(adc1_handle, TOUCH_X_P_PIN, &adc_config));
 
     // X+ ADC
     ESP_ERROR_CHECK(adc_oneshot_read(adc1_handle, TOUCH_X_P_PIN, &result));
+    gpio_set_level(TOUCH_Y_P_PIN, 0);
 
     return result;
 }
@@ -79,15 +79,15 @@ int read_touch_y()
     gpio_config(&y_io_conf);
 
     // Y+ high, Y- low
-    gpio_set_level(TOUCH_X_P_PIN, 1);
     gpio_set_level(TOUCH_X_M_PIN, 0);
-
+    gpio_set_level(TOUCH_X_P_PIN, 1);
 
     // Y+ config
     ESP_ERROR_CHECK(adc_oneshot_config_channel(adc1_handle, TOUCH_Y_P_PIN, &adc_config));
 
     // X+ ADC
     ESP_ERROR_CHECK(adc_oneshot_read(adc1_handle, TOUCH_Y_P_PIN, &result));
+    gpio_set_level(TOUCH_X_P_PIN, 0);
 
     return result;
 }
