@@ -20,4 +20,6 @@
 |개발환경| ESP-IDF v5.3 |
 | lvgl | 9.2.2 |
 
+## 핀 설정
 
+idf.py menuconfig -> Component config -> MP3 SPI Configuration
