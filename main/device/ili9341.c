@@ -117,14 +117,18 @@ void lcd_init()
     // spi init
     esp_err_t ret;
     // spi_device_handle_t spi;
-    spi_bus_config_t buscfg = {
-        .miso_io_num = LCD_MISO,
-        .mosi_io_num = LCD_MOSI,
-        .sclk_io_num = LCD_CLK,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-        .max_transfer_sz = TFT_HOR_RES * TFT_VER_RES / 10 + 8
-    };
+    // spi_bus_config_t buscfg = {
+    //     .miso_io_num = LCD_MISO,
+    //     .mosi_io_num = LCD_MOSI,
+    //     .sclk_io_num = LCD_CLK,
+    //     .quadwp_io_num = -1,
+    //     .quadhd_io_num = -1,
+    //     .max_transfer_sz = TFT_HOR_RES * TFT_VER_RES / 10 + 8
+    // };
+    //Initialize the SPI bus
+    // ret = spi_bus_initialize(LCD_HOST, spi_buscfg, SPI_DMA_CH_AUTO);
+    // ESP_ERROR_CHECK(ret);
+
     spi_device_interface_config_t devcfg = {
         .clock_speed_hz = 10 * 1000 * 1000,
         .mode = 0,
@@ -132,9 +136,6 @@ void lcd_init()
         .queue_size = 17,
         .pre_cb = lcd_spi_pre_transfer_callback,
     };
-    //Initialize the SPI bus
-    ret = spi_bus_initialize(LCD_HOST, &buscfg, SPI_DMA_CH_AUTO);
-    ESP_ERROR_CHECK(ret);
     //Attach the LCD to the SPI bus
     ret = spi_bus_add_device(LCD_HOST, &devcfg, &lcd_spi);
     ESP_ERROR_CHECK(ret);

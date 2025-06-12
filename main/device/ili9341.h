@@ -4,15 +4,15 @@
 #include "lvgl.h"
 
 // GPIO
-#define LCD_DC      GPIO_NUM_10
+#define LCD_DC      CONFIG_ILI9341_SPI_PIN_DC
 
 // SPI
-#define LCD_HOST    SPI2_HOST
+#define LCD_HOST    CONFIG_MP3_SPI_HOST
 
-#define LCD_CLK     GPIO_NUM_4
-#define LCD_MOSI    GPIO_NUM_6
-#define LCD_MISO    GPIO_NUM_5
-#define LCD_CS      GPIO_NUM_0
+#define LCD_CLK     CONFIG_MP3_SPI_PIN_CLK
+#define LCD_MOSI    CONFIG_MP3_SPI_PIN_MOSI
+#define LCD_MISO    CONFIG_MP3_SPI_PIN_MISO
+#define LCD_CS      CONFIG_ILI9341_SPI_PIN_CS
 
 
 #define TFT_HOR_RES   320
@@ -45,6 +45,6 @@ void lcd_data(const uint8_t *data, int len);
 void lcd_dma_data(const uint8_t *data, int data_len);
 void lcd_spi_pre_transfer_callback(spi_transaction_t *t);
 uint32_t lcd_get_id();
-void lcd_init();
 
+void lcd_init();
 void ili9341_flush( lv_display_t *disp, const lv_area_t *area, uint8_t * px_map);
