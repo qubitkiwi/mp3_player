@@ -22,4 +22,4 @@
 
 ## 핀 설정
 
-idf.py menuconfig -> Component config -> MP3 SPI Configuration
+idf.py menuconfig -> Component config -> MP3 PIN Configuration
