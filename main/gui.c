@@ -1,5 +1,5 @@
 #include "string.h"
-#include "esp_freertos_hooks.h"
+#include "esp_timer.h"
 #include "esp_log.h"
 #include "lvgl.h"
 
@@ -169,21 +169,32 @@ void gui_task(void *pvParameter)
     lv_display_set_buffers(lcd_disp, buf1, buf2, buf_size, LV_DISPLAY_RENDER_MODE_PARTIAL);
 
 
-    // // touchpad
+    // touchpad
     indev_touchpad = lv_indev_create();
     lv_indev_set_type(indev_touchpad, LV_INDEV_TYPE_POINTER);
     lv_indev_set_read_cb(indev_touchpad, touchpad_read);
 
-    esp_register_freertos_tick_hook(lv_tick_task);
+    // lv_tick periodic setup
+    const esp_timer_create_args_t lv_tick_timer_args = {
+            .callback = &lv_tick_task,
+            .name = "lv_tick"
+    };
+    esp_timer_handle_t lv_tick_timer;
+    ESP_ERROR_CHECK(esp_timer_create(&lv_tick_timer_args, &lv_tick_timer));
+    ESP_ERROR_CHECK(esp_timer_start_periodic(lv_tick_timer, 5 * 1000)); // 5ms
 
 
     create_main_screen();
+    
+    printf("gui free heap size: %ld\n", esp_get_free_heap_size());
 
     while(1) {
         lv_task_handler();
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 
+    ESP_ERROR_CHECK(esp_timer_stop(lv_tick_timer));
+    ESP_ERROR_CHECK(esp_timer_delete(lv_tick_timer));
     free(buf1);
     vTaskDelete(NULL);
 }
