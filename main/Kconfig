@@ -6,7 +6,7 @@ menu "MP3 PIN Configuration"
 
     config MP3_SPI_PIN_MOSI
         int "MOSI GPIO number"
-        default 6
+        default 7
 
     config MP3_SPI_PIN_MISO
         int "MISO GPIO number"
@@ -14,18 +14,18 @@ menu "MP3 PIN Configuration"
 
     config MP3_SPI_PIN_CLK
         int "CLK GPIO number"
-        default 4
+        default 6
 
     config ILI9341_SPI_PIN_CS
         int "ili341 CS GPIO number"
-        default 0
+        default 11
     
     config ILI9341_SPI_PIN_DC
         int "ili341 DC GPIO number"
-        default 10
+        default 12
 
     config SDCARD_SPI_PIN_CS
         int "sdcard CS GPIO number"
-        default 9
+        default 13
 
 endmenu

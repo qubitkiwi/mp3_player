@@ -10,7 +10,7 @@ static char TAG[] = "SD SPI";
 static sdmmc_host_t host = SDSPI_HOST_DEFAULT();
 static sdmmc_card_t *card;
 
-void sd_init()
+void sd_spi_init()
 {
     esp_err_t ret;
 
@@ -34,7 +34,7 @@ void sd_init()
 
 }
 
-void sd_mount()
+esp_err_t sd_mount()
 {
     esp_err_t ret;
     const char mount_point[] = MOUNT_POINT;
@@ -47,6 +47,7 @@ void sd_mount()
 
     sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
 
+    host.slot = SD_SPI_HOST;
     slot_config.gpio_cs = SD_SPI_CS;
     slot_config.host_id = host.slot;
 
@@ -60,12 +61,13 @@ void sd_mount()
             ESP_LOGE(TAG, "Failed to initialize the card (%s). "
                      "Make sure SD card lines have pull-up resistors in place.", esp_err_to_name(ret));
         }
-        return;
+        return ret;
     }
     ESP_LOGI(TAG, "Filesystem mounted");
 
     // Card has been initialized, print its properties
     sdmmc_card_print_info(stdout, card);
+    return ret;
 }
 
 void sd_unmount()

@@ -1,9 +1,17 @@
+#include "string.h"
 #include "esp_freertos_hooks.h"
+#include "esp_log.h"
 #include "lvgl.h"
 
 #include "./device/ili9341.h"
 #include "./device/resistive_touchscreen.h"
+#include "device/sdspi.h"
+#include "file_manager.h"
 #include "gui.h"
+
+#include "common.h"
+
+extern struct mp3_state MP3_STATE;
 
 static lv_display_t * lcd_disp;
 static lv_indev_t *indev_touchpad;
@@ -12,7 +20,6 @@ void touchpad_read(lv_indev_t * indev_drv, lv_indev_data_t * data)
 {
     static int32_t last_x = 0;
     static int32_t last_y = 0;
-
 
     int x_tmp = read_touch_x();
     int y_tmp = read_touch_y();
@@ -38,76 +45,116 @@ void IRAM_ATTR lv_tick_task(void)
 	lv_tick_inc(1);
 }
 
-static void btn_event_cb(lv_event_t * e)
+
+
+
+
+void play_music(lv_event_t * e)
 {
     lv_event_code_t code = lv_event_get_code(e);
-    lv_obj_t * btn = lv_event_get_target(e);
+    lv_obj_t * obj = lv_event_get_target(e);
+    int num = (int) lv_event_get_user_data(e);
     if(code == LV_EVENT_CLICKED) {
-        static uint8_t cnt = 0;
-        cnt++;
+        char file_path[300];
+        snprintf(file_path, sizeof(file_path), "%s%s", MOUNT_POINT, MP3_STATE.list[num]);
 
-        /*Get the first child of the button which is the label and change its text*/
-        lv_obj_t * label = lv_obj_get_child(btn, 0);
-        lv_label_set_text_fmt(label, "Button: %d", cnt);
+        set_music_file(file_path);
+        set_wav_cfg();
+        MP3_STATE.is_play = true;
+    }
+
+}
+
+void sd_cb(lv_event_t * e)
+{
+    static int cnt = 0;
+    lv_obj_t * sw = lv_event_get_target(e);
+    lv_obj_t * label = lv_event_get_user_data(e);
+
+    cnt++;
+    // sd card mount
+    if(lv_obj_has_state(sw, LV_STATE_CHECKED)) {
+        esp_err_t ret = sd_mount();
+        if (ret == ESP_OK) { 
+            lv_obj_add_state(sw, LV_STATE_CHECKED);
+            update_mp3_list(MOUNT_POINT);
+            lv_label_set_text_fmt(label, "sd unmount");
+            return ;
+        } else {
+            lv_obj_clear_state(sw, LV_STATE_CHECKED);
+            lv_label_set_text_fmt(label, "sd mount try: %d", cnt);
+            return ;
+        }
+
+    } else {
+        // sd card unmount
+        sd_unmount();
+        cnt = 0;
+        return ;
+    }
+
+}
+
+
+void update_list(lv_event_t * e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t * obj = lv_event_get_target(e);
+    lv_obj_t * playlist = (int) lv_event_get_user_data(e);
+
+    if(code == LV_EVENT_CLICKED) {
+
+        for (int i = 0; i < MP3_STATE.max_list; i++) {
+            lv_obj_t *btn = lv_list_add_button(playlist, LV_SYMBOL_PLAY, MP3_STATE.list[i]);
+            lv_obj_add_event_cb(btn, play_music, LV_EVENT_CLICKED, (void*) i);
+        }
     }
 }
 
-/**
- * Create a button with a label and react on click event.
- */
-void lv_example_get_started_2(void)
+void create_main_screen(void)
 {
-    lv_obj_t * btn = lv_button_create(lv_screen_active());     /*Add a button the current screen*/
-    lv_obj_set_align(btn, LV_ALIGN_CENTER);
-    lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_ALL, NULL);           /*Assign a callback to the button*/
+    lv_obj_t *root = lv_obj_create(NULL);
+    lv_scr_load(root);
 
-    lv_obj_t * label = lv_label_create(btn);          /*Add a label to the button*/
-    lv_label_set_text(label, "Button");                     /*Set the labels text*/
-    lv_obj_center(label);
+    lv_obj_set_size(root, 320, 240);
+    lv_obj_set_flex_flow(root, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(root, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START);
+
+    lv_obj_t *btn_container = lv_obj_create(root);
+    lv_obj_set_width(btn_container, lv_pct(100));
+    lv_obj_set_layout(btn_container, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(btn_container, LV_FLEX_FLOW_ROW);
+
+    lv_obj_t *label = lv_label_create(btn_container);
+    lv_label_set_text(label, "SD Card Mount");
+
+    lv_obj_t *sw = lv_switch_create(btn_container);
+    lv_obj_add_event_cb(sw, sd_cb, LV_EVENT_VALUE_CHANGED, label);
+
+    // play list update button
+    lv_obj_t *update_btn = lv_btn_create(btn_container);
+    lv_obj_set_flex_grow(update_btn, 1);
+    lv_obj_t *update_label = lv_label_create(update_btn);
+    lv_label_set_text(update_label, "Update Play List");
+
+    lv_obj_t *playlist;
+    playlist = lv_list_create(root);
+    
+    lv_obj_add_event_cb(update_btn, update_list, LV_EVENT_CLICKED, (void*) playlist);
+    
+    lv_obj_set_height(playlist, 200);
+    lv_list_add_text(playlist, "play list");
+
+    for (int i = 0; i < MP3_STATE.max_list; i++) {
+        lv_obj_t *btn = lv_list_add_button(playlist, LV_SYMBOL_PLAY, MP3_STATE.list[i]);
+        lv_obj_add_event_cb(btn, play_music, LV_EVENT_CLICKED, (void*) i);
+    }
+
 }
 
-static void anim_x_cb(void * var, int32_t v)
-{
-    lv_obj_set_x(var, v);
-}
-
-static void anim_size_cb(void * var, int32_t v)
-{
-    lv_obj_set_size(var, v, v);
-}
-
-/**
- * Create a playback animation
- */
-void lv_example_anim_2(void)
-{
-
-    lv_obj_t * obj = lv_obj_create(lv_screen_active());
-    lv_obj_set_style_bg_color(obj, lv_palette_main(LV_PALETTE_RED), 0);
-    lv_obj_set_style_radius(obj, LV_RADIUS_CIRCLE, 0);
-
-    lv_obj_align(obj, LV_ALIGN_LEFT_MID, 10, 0);
-
-    lv_anim_t a;
-    lv_anim_init(&a);
-    lv_anim_set_var(&a, obj);
-    lv_anim_set_values(&a, 10, 50);
-    lv_anim_set_duration(&a, 1000);
-    lv_anim_set_playback_delay(&a, 100);
-    lv_anim_set_playback_duration(&a, 300);
-    lv_anim_set_repeat_delay(&a, 500);
-    lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
-    lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out);
-
-    lv_anim_set_exec_cb(&a, anim_size_cb);
-    lv_anim_start(&a);
-    lv_anim_set_exec_cb(&a, anim_x_cb);
-    lv_anim_set_values(&a, 10, 240);
-    lv_anim_start(&a);
-}
 
 void gui_task(void *pvParameter)
-{
+{    
     lcd_init();
     touch_init();
     
@@ -128,13 +175,14 @@ void gui_task(void *pvParameter)
     lv_indev_set_read_cb(indev_touchpad, touchpad_read);
 
     esp_register_freertos_tick_hook(lv_tick_task);
-	lv_example_get_started_2();
-    // lv_example_anim_2();
 
-	while(1) {
-		lv_task_handler();
-		vTaskDelay(20 / portTICK_PERIOD_MS);
-	}
+
+    create_main_screen();
+
+    while(1) {
+        lv_task_handler();
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+    }
 
     free(buf1);
     vTaskDelete(NULL);

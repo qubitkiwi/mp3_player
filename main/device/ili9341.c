@@ -130,11 +130,12 @@ void lcd_init()
     // ESP_ERROR_CHECK(ret);
 
     spi_device_interface_config_t devcfg = {
-        .clock_speed_hz = 10 * 1000 * 1000,
+        .clock_speed_hz = 20 * 1000 * 1000,
         .mode = 0,
         .spics_io_num = LCD_CS,
-        .queue_size = 17,
+        .queue_size = 19,
         .pre_cb = lcd_spi_pre_transfer_callback,
+        .flags = 0,
     };
     //Attach the LCD to the SPI bus
     ret = spi_bus_add_device(LCD_HOST, &devcfg, &lcd_spi);
